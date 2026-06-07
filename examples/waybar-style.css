@@ -1,0 +1,22 @@
+#custom-lyrics {
+  color: #dcdcdc;
+  background-color: alpha(@foreground, 0.035);
+  border: 1px solid alpha(@foreground, 0.08);
+  border-radius: 0;
+  margin-left: 18px;
+  padding: 0 10px;
+  font-weight: 600;
+}
+
+#custom-lyrics.active {
+  color: #eeeeee;
+  background-color: alpha(@foreground, 0.045);
+  border-color: alpha(@foreground, 0.10);
+}
+
+#custom-lyrics.paused {
+  color: #bdbdbd;
+  background-color: alpha(@foreground, 0.025);
+  border-color: alpha(@foreground, 0.06);
+  font-style: italic;
+}

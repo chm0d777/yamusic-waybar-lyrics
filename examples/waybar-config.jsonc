@@ -1,0 +1,11 @@
+"custom/lyrics": {
+    "return-type": "json",
+    "format": "{}",
+    "hide-empty-text": true,
+    "exec": "~/.local/bin/yamusic-waybar-lyrics",
+    "on-click": "playerctl play-pause",
+    "on-click-right": "playerctl next",
+    "on-click-middle": "playerctl previous",
+    "on-scroll-up": "~/.local/bin/yamusic-waybar-lyrics seek next",
+    "on-scroll-down": "~/.local/bin/yamusic-waybar-lyrics seek prev"
+}
