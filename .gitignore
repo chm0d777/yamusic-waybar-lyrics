@@ -9,3 +9,18 @@ venv/
 secrets.*
 cache/
 *.log
+
+# IDE
+.vscode/
+.idea/
+
+# OS / Editor
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Temp / State
+*.tmp
+*.bak
+state.json

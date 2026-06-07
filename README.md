@@ -145,6 +145,103 @@ CSS для кнопки лайка лежит в `examples/waybar-like-style.css
 
 Для треков передаётся `track_id:album_id`, поэтому трек попадает именно в библиотеку “Мне нравится”, а не лайкается как плейлист/альбом/артист.
 
+## API Mapping (примеры из документации MarshalX)
+
+Ниже показано, как наши raw-HTTP вызовы соответствуют официальной документации `MarshalX/yandex-music-api`.
+
+### Подпись запросов
+
+В MarshalX подпись генерируется так:
+
+```python
+from yandex_music.utils.sign_request import get_sign_request
+sign = get_sign_request(track_id="12345")
+print(sign.timestamp, sign.value)
+```
+
+У нас — тот же алгоритм (`yandex_music/utils/sign_request.py` line-by-line):
+
+```python
+import base64, datetime, hashlib, hmac
+KEY = "p93jhgh689SBReK6ghtw62"
+track_id = "12345"
+timestamp = int(datetime.datetime.now().timestamp())
+message = f"{track_id}{timestamp}".encode("utf-8")
+sign = base64.b64encode(
+    hmac.new(KEY.encode("utf-8"), message, hashlib.sha256).digest()
+).decode("utf-8")
+```
+
+- Тот же ключ `p93jhgh689SBReK6ghtw62` из Android-приложения.
+- Тот же формат сообщения: `{numeric_track_id}{timestamp}`.
+- Тот же HMAC-SHA256 + Base64.
+
+### Поиск трека
+
+MarshalX:
+
+```python
+from yandex_music import Client
+client = Client().init()
+result = client.search("Deftones Change")
+track = result.best.result
+```
+
+У нас:
+
+```python
+params = urllib.parse.urlencode({"text": "Deftones Change", "type": "track", "page": "0"})
+result = request_json(f"https://api.music.yandex.net/search?{params}")
+tracks = result["tracks"]["results"]
+```
+
+### Лайк трека
+
+MarshalX:
+
+```python
+from yandex_music import Client
+client = Client(TOKEN).init()
+client.users_likes_tracks_add("12345:67890")
+```
+
+У нас:
+
+```python
+request_json(
+    f"https://api.music.yandex.net/users/{uid}/likes/tracks/add-multiple",
+    {"track-ids": "12345:67890"}
+)
+```
+
+Endpoint и payload (`track-ids`) идентичны внутреннему вызову библиотеки.
+
+### Account status (получение uid)
+
+MarshalX:
+
+```python
+from yandex_music import Client
+client = Client(TOKEN).init()
+print(client.me.account.uid)
+```
+
+У нас:
+
+```python
+result = request_json("https://api.music.yandex.net/account/status")
+uid = result["account"]["uid"]
+```
+
+### Получение токена
+
+См. официальную документацию MarshalX:
+
+- https://ym.marshal.dev/token/
+- https://github.com/MarshalX/yandex-music-api/blob/main/docs/source/token.md
+
+Мы читаем `YANDEX_TOKEN` только из `os.environ`, не сохраняем и не логируем.
+
 ## Cache
 
 Тексты кешируются по Yandex `track_id:album_id` в:

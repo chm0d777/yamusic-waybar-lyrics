@@ -4,6 +4,7 @@ import json
 import os
 import subprocess
 import sys
+import time
 import urllib.parse
 import urllib.request
 
@@ -22,6 +23,11 @@ YANDEX_HEADERS = {
 YANDEX_POST_HEADERS = {**YANDEX_HEADERS, "Content-Type": "application/x-www-form-urlencoded"}
 LIKE_EMPTY = "♡"
 LIKE_FULL = "♥"
+
+CACHE_DIR = os.path.expanduser("~/.cache/yamusic-waybar-lyrics")
+LIBRARY_CACHE_TTL = 300  # 5 minutes
+UID_CACHE_TTL = 3600     # 1 hour
+TRACK_SEARCH_CACHE_TTL = 86400  # 1 day
 
 
 def emit(text: str, css_class: str = "", tooltip: str = "") -> None:
@@ -79,16 +85,60 @@ def current_track() -> tuple[str, str, str]:
         return "", "", ""
 
 
+# --- Caches ---
+
+_uid_cache: tuple[str, float] | None = None
+
 def account_uid() -> str:
+    global _uid_cache
+    now = time.time()
+    if _uid_cache and now - _uid_cache[1] < UID_CACHE_TTL:
+        return _uid_cache[0]
     result = request_json("https://api.music.yandex.net/account/status")
     account = (result or {}).get("account", {})
-    return str(account.get("uid") or "")
+    uid = str(account.get("uid") or "")
+    if uid:
+        _uid_cache = (uid, now)
+    return uid
 
+
+_library_cache: dict[str, tuple[set[str], float]] = {}
+
+def library_ids(uid: str, kind: str) -> set[str]:
+    now = time.time()
+    if kind in _library_cache:
+        ids, cached_at = _library_cache[kind]
+        if now - cached_at < LIBRARY_CACHE_TTL:
+            return ids
+    result = request_json(f"https://api.music.yandex.net/users/{uid}/{kind}/tracks")
+    library = (result or {}).get("library", {})
+    tracks = library.get("tracks") or []
+    ids = set()
+    for track in tracks:
+        track_id = str(track.get("id") or "")
+        album_id = str(track.get("albumId") or track.get("album_id") or "")
+        if track_id:
+            ids.add(f"{track_id}:{album_id}" if album_id else track_id)
+    _library_cache[kind] = (ids, now)
+    return ids
+
+
+def invalidate_library_cache(kind: str) -> None:
+    _library_cache.pop(kind, None)
+
+
+_track_search_cache: dict[tuple[str, str, str], tuple[str, float]] = {}
 
 def yandex_track_id(key: tuple[str, str, str]) -> str:
     title, artist, album = key
     if not title or not artist:
         return ""
+    cache_key = key
+    now = time.time()
+    if cache_key in _track_search_cache:
+        track_id, cached_at = _track_search_cache[cache_key]
+        if now - cached_at < TRACK_SEARCH_CACHE_TTL:
+            return track_id
 
     params = urllib.parse.urlencode({"text": f"{title} {artist}", "type": "track", "page": "0"})
     result = request_json(f"https://api.music.yandex.net/search?{params}")
@@ -118,25 +168,16 @@ def yandex_track_id(key: tuple[str, str, str]) -> str:
             best_score = score
 
     if not best or best_score < 4:
+        _track_search_cache[cache_key] = ("", now)
         return ""
     track_id = str(best.get("id") or "")
     album_id = str((best.get("albums") or [{}])[0].get("id") or "")
     if not track_id:
+        _track_search_cache[cache_key] = ("", now)
         return ""
-    return f"{track_id}:{album_id}" if album_id else track_id
-
-
-def library_ids(uid: str, kind: str) -> set[str]:
-    result = request_json(f"https://api.music.yandex.net/users/{uid}/{kind}/tracks")
-    library = (result or {}).get("library", {})
-    tracks = library.get("tracks") or []
-    ids = set()
-    for track in tracks:
-        track_id = str(track.get("id") or "")
-        album_id = str(track.get("albumId") or track.get("album_id") or "")
-        if track_id:
-            ids.add(f"{track_id}:{album_id}" if album_id else track_id)
-    return ids
+    full_id = f"{track_id}:{album_id}" if album_id else track_id
+    _track_search_cache[cache_key] = (full_id, now)
+    return full_id
 
 
 def post_track_action(uid: str, kind: str, action: str, track_id: str) -> bool:
@@ -186,14 +227,24 @@ def action(command: str) -> int:
     ok = False
     if command == "toggle":
         ok = post_track_action(uid, "likes", "remove", track_id) if liked else post_track_action(uid, "likes", "add-multiple", track_id)
+        if ok:
+            invalidate_library_cache("likes")
     elif command == "like":
         ok = post_track_action(uid, "likes", "add-multiple", track_id)
+        if ok:
+            invalidate_library_cache("likes")
     elif command == "unlike":
         ok = post_track_action(uid, "likes", "remove", track_id)
+        if ok:
+            invalidate_library_cache("likes")
     elif command == "dislike":
         ok = post_track_action(uid, "dislikes", "add-multiple", track_id)
+        if ok:
+            invalidate_library_cache("dislikes")
     elif command == "undislike":
         ok = post_track_action(uid, "dislikes", "remove", track_id)
+        if ok:
+            invalidate_library_cache("dislikes")
 
     refresh_waybar()
     return 0 if ok else 1
