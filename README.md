@@ -12,7 +12,7 @@
 
 ![Скриншот Waybar lyrics module](assets/screenshot.png)
 
-## Анимация Перед Первой Строкой
+## Анимация перед первой строкой
 
 <img src="assets/demo-loading.gif" width="218" alt="Демо анимированных точек загрузки">
 
