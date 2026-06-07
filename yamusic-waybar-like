@@ -28,6 +28,9 @@ CACHE_DIR = os.path.expanduser("~/.cache/yamusic-waybar-lyrics")
 LIBRARY_CACHE_TTL = 300  # 5 minutes
 UID_CACHE_TTL = 3600     # 1 hour
 TRACK_SEARCH_CACHE_TTL = 86400  # 1 day
+PREDICTION_TTL = 5.0
+PREDICTION_FILE = f"/tmp/yamusic-waybar-like-{os.getuid()}.json"
+LIBRARY_CACHE_FILE = os.path.join(CACHE_DIR, "library-likes.json")
 
 
 def emit(text: str, css_class: str = "", tooltip: str = "") -> None:
@@ -65,7 +68,6 @@ def find_mpris_player(bus: dbus.SessionBus) -> str:
         )
         if name:
             return name
-        # Fallback: любой MPRIS player (для yamusic-tui и др.)
         return next(
             (str(name) for name in bus.list_names() if str(name).startswith("org.mpris.MediaPlayer2.")),
             "",
@@ -95,7 +97,63 @@ def current_track() -> tuple[str, str, str]:
         return "", "", ""
 
 
-# --- Caches ---
+# --- Prediction state (instant UI feedback) ---
+
+def write_prediction(track_id: str, liked: bool) -> None:
+    try:
+        os.makedirs(CACHE_DIR, exist_ok=True)
+        with open(PREDICTION_FILE, "w", encoding="utf-8") as f:
+            json.dump({"track_id": track_id, "liked": liked, "ts": time.time()}, f)
+    except Exception:
+        pass
+
+
+def read_prediction(track_id: str) -> bool | None:
+    try:
+        with open(PREDICTION_FILE, encoding="utf-8") as f:
+            payload = json.load(f)
+        if payload.get("track_id") != track_id:
+            return None
+        if time.time() - float(payload.get("ts", 0)) > PREDICTION_TTL:
+            return None
+        return bool(payload.get("liked"))
+    except Exception:
+        return None
+
+
+# --- Persistent library cache (one-shot process optimization) ---
+
+def read_library_cache(kind: str) -> tuple[set[str], float] | None:
+    try:
+        with open(LIBRARY_CACHE_FILE, encoding="utf-8") as f:
+            payload = json.load(f)
+        if payload.get("kind") != kind:
+            return None
+        cached_at = float(payload.get("cached_at", 0))
+        if time.time() - cached_at > LIBRARY_CACHE_TTL:
+            return None
+        return set(payload.get("ids", [])), cached_at
+    except Exception:
+        return None
+
+
+def write_library_cache(kind: str, ids: set[str]) -> None:
+    try:
+        os.makedirs(CACHE_DIR, exist_ok=True)
+        with open(LIBRARY_CACHE_FILE, "w", encoding="utf-8") as f:
+            json.dump({"kind": kind, "ids": sorted(ids), "cached_at": time.time()}, f)
+    except Exception:
+        pass
+
+
+def invalidate_library_cache() -> None:
+    try:
+        os.remove(LIBRARY_CACHE_FILE)
+    except FileNotFoundError:
+        pass
+
+
+# --- Account / Library ---
 
 _uid_cache: tuple[str, float] | None = None
 
@@ -112,14 +170,10 @@ def account_uid() -> str:
     return uid
 
 
-_library_cache: dict[str, tuple[set[str], float]] = {}
-
 def library_ids(uid: str, kind: str) -> set[str]:
-    now = time.time()
-    if kind in _library_cache:
-        ids, cached_at = _library_cache[kind]
-        if now - cached_at < LIBRARY_CACHE_TTL:
-            return ids
+    cached = read_library_cache(kind)
+    if cached:
+        return cached[0]
     result = request_json(f"https://api.music.yandex.net/users/{uid}/{kind}/tracks")
     library = (result or {}).get("library", {})
     tracks = library.get("tracks") or []
@@ -131,13 +185,11 @@ def library_ids(uid: str, kind: str) -> set[str]:
             album_id = str(track.get("albumId") or track.get("album_id") or "")
             if album_id and ":" not in raw_id:
                 ids.add(f"{raw_id}:{album_id}")
-    _library_cache[kind] = (ids, now)
+    write_library_cache(kind, ids)
     return ids
 
 
-def invalidate_library_cache(kind: str) -> None:
-    _library_cache.pop(kind, None)
-
+# --- Track search ---
 
 _track_search_cache: dict[tuple[str, str, str], tuple[str, float]] = {}
 
@@ -212,6 +264,17 @@ def status() -> int:
         emit(LIKE_EMPTY, "unavailable", "Unable to get account uid")
         return 0
 
+    # Instant prediction from click
+    predicted = read_prediction(track_id)
+    if predicted is not None:
+        title, artist, _album = key
+        tooltip = f"{title} - {artist}"
+        if predicted:
+            emit(LIKE_FULL, "liked", tooltip)
+        else:
+            emit(LIKE_EMPTY, "unliked", tooltip)
+        return 0
+
     liked = track_id in library_ids(uid, "likes")
     title, artist, _album = key
     tooltip = f"{title} - {artist}"
@@ -234,17 +297,24 @@ def action(command: str) -> int:
     liked = track_id in library_ids(uid, "likes")
     ok = False
     if command == "toggle":
+        will_like = not liked
+        write_prediction(track_id, will_like)
+        refresh_waybar()  # instant feedback
         ok = post_track_action(uid, "likes", "remove", track_id) if liked else post_track_action(uid, "likes", "add-multiple", track_id)
         if ok:
-            invalidate_library_cache("likes")
+            invalidate_library_cache()
     elif command == "like":
+        write_prediction(track_id, True)
+        refresh_waybar()
         ok = post_track_action(uid, "likes", "add-multiple", track_id)
         if ok:
-            invalidate_library_cache("likes")
+            invalidate_library_cache()
     elif command == "unlike":
+        write_prediction(track_id, False)
+        refresh_waybar()
         ok = post_track_action(uid, "likes", "remove", track_id)
         if ok:
-            invalidate_library_cache("likes")
+            invalidate_library_cache()
 
     refresh_waybar()
     return 0 if ok else 1
