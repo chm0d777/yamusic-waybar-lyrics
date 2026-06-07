@@ -21,8 +21,8 @@ YANDEX_HEADERS = {
     "X-Yandex-Music-Client": "YandexMusicAndroid/24023621",
 }
 YANDEX_POST_HEADERS = {**YANDEX_HEADERS, "Content-Type": "application/x-www-form-urlencoded"}
-LIKE_EMPTY = "♡"
-LIKE_FULL = "♥"
+LIKE_EMPTY = "\uf08a"  # fa-heart-o (outline)
+LIKE_FULL = "\uf004"   # fa-heart (filled)
 
 CACHE_DIR = os.path.expanduser("~/.cache/yamusic-waybar-lyrics")
 LIBRARY_CACHE_TTL = 300  # 5 minutes
