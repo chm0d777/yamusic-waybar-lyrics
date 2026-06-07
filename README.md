@@ -8,11 +8,11 @@ Synced Yandex Music lyrics for Waybar.
 
 The module reads Firefox MPRIS metadata/position, fetches LRC lyrics from Yandex Music, caches them on disk, and prints Waybar JSON. It can also seek to the next/previous lyric line with mouse wheel actions.
 
-## Screenshot
+## Preview
 
 ![Waybar lyrics module screenshot](assets/screenshot.png)
 
-## Loading Animation
+## Animation Before First Line
 
 ![Animated loading dots demo](assets/demo-loading.gif)
 
