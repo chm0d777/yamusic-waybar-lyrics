@@ -237,14 +237,6 @@ def action(command: str) -> int:
         ok = post_track_action(uid, "likes", "remove", track_id)
         if ok:
             invalidate_library_cache("likes")
-    elif command == "dislike":
-        ok = post_track_action(uid, "dislikes", "add-multiple", track_id)
-        if ok:
-            invalidate_library_cache("dislikes")
-    elif command == "undislike":
-        ok = post_track_action(uid, "dislikes", "remove", track_id)
-        if ok:
-            invalidate_library_cache("dislikes")
 
     refresh_waybar()
     return 0 if ok else 1
@@ -253,7 +245,7 @@ def action(command: str) -> int:
 def main() -> int:
     if len(sys.argv) == 1 or sys.argv[1] == "status":
         return status()
-    if sys.argv[1] in {"toggle", "like", "unlike", "dislike", "undislike"}:
+    if sys.argv[1] in {"toggle", "like", "unlike"}:
         return action(sys.argv[1])
     return 2
 

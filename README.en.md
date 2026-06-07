@@ -125,14 +125,12 @@ Restart Waybar after changes.
 
 ## Controls
 
-- Left click: play/pause
-- Right click: next track
-- Middle click: previous track
-- Scroll up: seek to next lyric line
-- Scroll down: seek to previous lyric line
+- Left click on lyrics: play/pause
+- Right click on lyrics: next track
+- Middle click on lyrics: previous track
+- Scroll up on lyrics: seek to next lyric line
+- Scroll down on lyrics: seek to previous lyric line
 - Like module left click: toggle like
-- Like module right click: mark as “Do not recommend”
-- Like module middle click: remove “Do not recommend”
 
 ## Like Module
 
@@ -140,10 +138,20 @@ The like button uses the same endpoints documented by `MarshalX/yandex-music-api
 
 - `users/{uid}/likes/tracks/add-multiple` to like
 - `users/{uid}/likes/tracks/remove` to unlike
-- `users/{uid}/dislikes/tracks/add-multiple` to mark as “Do not recommend”
-- `users/{uid}/dislikes/tracks/remove` to remove “Do not recommend”
 
 Tracks are sent as `track_id:album_id`, so the track is added to the actual “Liked” library, not accidentally liked as a playlist/album/artist.
+
+```jsonc
+"custom/like": {
+    "return-type": "json",
+    "format": "{}",
+    "hide-empty-text": true,
+    "exec": "~/.local/bin/yamusic-waybar-like status",
+    "interval": 10,
+    "signal": 12,
+    "on-click": "~/.local/bin/yamusic-waybar-like toggle"
+}
+```
 
 ## API Mapping (examples from MarshalX docs)
 

@@ -125,14 +125,12 @@ CSS для кнопки лайка лежит в `examples/waybar-like-style.css
 
 ## Управление
 
-- ЛКМ: play/pause
-- ПКМ: следующий трек
-- Клик колёсиком: предыдущий трек
-- Scroll up: перейти к следующей строке текста
-- Scroll down: перейти к предыдущей строке текста
+- ЛКМ на lyrics: play/pause
+- ПКМ на lyrics: следующий трек
+- Клик колёсиком на lyrics: предыдущий трек
+- Scroll up на lyrics: перейти к следующей строке текста
+- Scroll down на lyrics: перейти к предыдущей строке текста
 - Like module ЛКМ: поставить/снять лайк
-- Like module ПКМ: поставить “Не рекомендовать”
-- Like module клик колёсиком: снять “Не рекомендовать”
 
 ## Like Module
 
@@ -140,10 +138,20 @@ CSS для кнопки лайка лежит в `examples/waybar-like-style.css
 
 - `users/{uid}/likes/tracks/add-multiple` для лайка
 - `users/{uid}/likes/tracks/remove` для снятия лайка
-- `users/{uid}/dislikes/tracks/add-multiple` для “Не рекомендовать”
-- `users/{uid}/dislikes/tracks/remove` для снятия “Не рекомендовать”
 
 Для треков передаётся `track_id:album_id`, поэтому трек попадает именно в библиотеку “Мне нравится”, а не лайкается как плейлист/альбом/артист.
+
+```jsonc
+"custom/like": {
+    "return-type": "json",
+    "format": "{}",
+    "hide-empty-text": true,
+    "exec": "~/.local/bin/yamusic-waybar-like status",
+    "interval": 10,
+    "signal": 12,
+    "on-click": "~/.local/bin/yamusic-waybar-like toggle"
+}
+```
 
 ## API Mapping (примеры из документации MarshalX)
 
