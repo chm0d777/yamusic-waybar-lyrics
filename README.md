@@ -1,5 +1,7 @@
 # yamusic-waybar-lyrics
 
+[English](README.md) | [Русский](README.ru.md)
+
 Synced Yandex Music lyrics for Waybar.
 
 > Disclosure: this module was coded with an AI coding agent, GPT-5.5, rather than written entirely by hand.
@@ -35,7 +37,7 @@ The module reads Firefox MPRIS metadata/position, fetches LRC lyrics from Yandex
 - `playerctl` for the example click actions
 - Optional: `sptlrx` for fallback
 
-On Arch/Omarchy-like systems:
+On Arch/Arch-based systems:
 
 ```sh
 sudo pacman -S python-dbus playerctl waybar
@@ -58,6 +60,20 @@ Do not commit tokens. Do not put real tokens into this repository.
 ## Waybar
 
 Add `custom/lyrics` to your Waybar modules and use the snippet from `examples/waybar-config.jsonc`.
+
+```jsonc
+"custom/lyrics": {
+    "return-type": "json",
+    "format": "{}",
+    "hide-empty-text": true,
+    "exec": "~/.local/bin/yamusic-waybar-lyrics",
+    "on-click": "playerctl play-pause",
+    "on-click-right": "playerctl next",
+    "on-click-middle": "playerctl previous",
+    "on-scroll-up": "~/.local/bin/yamusic-waybar-lyrics seek next",
+    "on-scroll-down": "~/.local/bin/yamusic-waybar-lyrics seek prev"
+}
+```
 
 Add the CSS from `examples/waybar-style.css` or adapt it to your theme.
 
