@@ -23,7 +23,7 @@ import dbus
 ANSI_RE = re.compile(r"\x1b\[[0-?]*[ -/]*[@-~]")
 LRC_RE = re.compile(r"\[(\d+):(\d+(?:\.\d+)?)\]\s*(.*)")
 LYRIC_ICON = ""
-PLAYER = "firefox"
+PLAYER = os.environ.get("MPRIS_PLAYER", "firefox")
 MPRIS_PREFIX = f"org.mpris.MediaPlayer2.{PLAYER}"
 STATE_FILE = f"/tmp/yamusic-waybar-lyrics-{os.getuid()}.json"
 CACHE_DIR = Path.home() / ".cache" / "yamusic-waybar-lyrics"

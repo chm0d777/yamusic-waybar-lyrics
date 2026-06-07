@@ -4,9 +4,9 @@
 
 Synced Yandex Music lyrics for Waybar.
 
-> Disclosure: this module was coded with an AI coding agent, GPT-5.5, rather than written entirely by hand.
+> Disclosure: this module was coded with an AI coding agent, GPT-5.5, rather than written entirely by hand. Optimization may be imperfect.
 
-The module reads Firefox MPRIS metadata/position, fetches LRC lyrics from Yandex Music, caches them on disk, and prints Waybar JSON. It can also seek to the next/previous lyric line with mouse wheel actions.
+The module reads MPRIS metadata/position, fetches LRC lyrics from Yandex Music, caches them on disk, and prints Waybar JSON. It can also seek to the next/previous lyric line with mouse wheel actions.
 
 ## Preview
 
@@ -14,18 +14,19 @@ The module reads Firefox MPRIS metadata/position, fetches LRC lyrics from Yandex
 
 ## Animation Before First Line
 
-![Animated loading dots demo](assets/demo-loading.gif)
+<img src="assets/demo-loading.gif" width="218" alt="Animated loading dots demo">
 
 ## Features
 
 - Direct Yandex Music LRC backend.
-- MPRIS playback position from Firefox.
+- MPRIS playback position from any compatible player/browser.
 - In-memory cache while running.
 - Persistent cache in `~/.cache/yamusic-waybar-lyrics/`.
 - Negative cache for missing lyrics for 3 days.
 - Tooltip with current line plus next 5 lines.
 - Mouse wheel seek to next/previous lyric line.
-- Optional `sptlrx` fallback for non-Yandex/no-direct-lyrics cases.
+- Default player target is Firefox, configurable with `MPRIS_PLAYER`.
+- Optional `sptlrx` fallback for no-direct-lyrics cases.
 - No token is stored in files or cache.
 
 ## Requirements
@@ -33,7 +34,8 @@ The module reads Firefox MPRIS metadata/position, fetches LRC lyrics from Yandex
 - Python 3.10+
 - `dbus-python`
 - Waybar
-- Firefox exposing MPRIS for Yandex Music
+- Any player/browser exposing MPRIS metadata and position. Firefox is the default target.
+- Yandex Music OAuth token for direct LRC lookup. The current track does not have to come from the Yandex Music web UI, but it must be matchable in Yandex Music for direct lyrics.
 - `playerctl` for the example click actions
 - Optional: `sptlrx` for fallback
 
@@ -46,8 +48,18 @@ sudo pacman -S python-dbus playerctl waybar
 ## Install
 
 ```sh
+mkdir -p ~/.local/bin
+curl -fsSL https://raw.githubusercontent.com/chm0d777/yamusic-waybar-lyrics/main/yamusic-waybar-lyrics -o ~/.local/bin/yamusic-waybar-lyrics
+chmod +x ~/.local/bin/yamusic-waybar-lyrics
+```
+
+If you cloned or downloaded this repository, install the local file instead:
+
+```sh
 install -Dm755 yamusic-waybar-lyrics ~/.local/bin/yamusic-waybar-lyrics
 ```
+
+`install -Dm755` copies the local `yamusic-waybar-lyrics` file, creates parent directories if needed, and marks the destination executable.
 
 Set a Yandex Music OAuth token in your shell/session environment:
 
@@ -79,6 +91,12 @@ Add `custom/lyrics` to your Waybar modules and use the snippet from `examples/wa
 }
 ```
 
+For a non-Firefox MPRIS player, prefix the command with `MPRIS_PLAYER`. Example:
+
+```jsonc
+"exec": "MPRIS_PLAYER=chromium ~/.local/bin/yamusic-waybar-lyrics"
+```
+
 Add the CSS from `examples/waybar-style.css` or adapt it to your theme.
 
 Restart Waybar after changes.
@@ -106,8 +124,6 @@ Cache files contain track metadata and lyric timestamps/text only. They do not c
 ## Privacy
 
 The script reads `YANDEX_TOKEN` from the process environment at runtime. It never prints it and never writes it to disk.
-
-The Yandex request signing value in the source is a public compatibility constant used by existing open Yandex Music clients. It is not an account token or private API key.
 
 ## Honorable Mentions
 
