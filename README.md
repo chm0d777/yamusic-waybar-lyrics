@@ -112,6 +112,7 @@ export YANDEX_TOKEN='your-token-here'
   border: 1px solid alpha(@foreground, 0.08);
   border-radius: 0;
   padding: 0 10px;
+  min-width: 140px;
   font-weight: 600;
 }
 
@@ -131,6 +132,7 @@ export YANDEX_TOKEN='your-token-here'
 #custom-like {
   font-weight: 900;
   padding: 0 10px;
+  min-width: 140px;
   min-width: 24px;
 }
 
