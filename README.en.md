@@ -103,6 +103,42 @@ For a non-Firefox MPRIS player, prefix the command with `MPRIS_PLAYER`. Example:
 
 Add the CSS from `examples/waybar-style.css` or adapt it to your theme.
 
+Example CSS:
+
+```css
+#custom-lyrics {
+  color: #dcdcdc;
+  background-color: alpha(@foreground, 0.035);
+  border: 1px solid alpha(@foreground, 0.08);
+  border-radius: 0;
+  padding: 0 10px;
+  font-weight: 600;
+}
+
+#custom-lyrics.active {
+  color: #eeeeee;
+  background-color: alpha(@foreground, 0.045);
+  border-color: alpha(@foreground, 0.10);
+}
+
+#custom-lyrics.paused {
+  color: #bdbdbd;
+  background-color: alpha(@foreground, 0.025);
+  border-color: alpha(@foreground, 0.06);
+  font-style: italic;
+}
+
+#custom-like {
+  font-weight: 900;
+  padding: 0 10px;
+  min-width: 24px;
+}
+
+#custom-like.liked {
+  color: #e06c75;
+}
+```
+
 For a separate like button, add `custom/like` to your Waybar modules and use the snippet from `examples/waybar-like-config.jsonc`.
 
 ```jsonc
@@ -113,9 +149,7 @@ For a separate like button, add `custom/like` to your Waybar modules and use the
     "exec": "~/.local/bin/yamusic-waybar-like status",
     "interval": 10,
     "signal": 12,
-    "on-click": "~/.local/bin/yamusic-waybar-like toggle",
-    "on-click-right": "~/.local/bin/yamusic-waybar-like dislike",
-    "on-click-middle": "~/.local/bin/yamusic-waybar-like undislike"
+    "on-click": "~/.local/bin/yamusic-waybar-like toggle"
 }
 ```
 
