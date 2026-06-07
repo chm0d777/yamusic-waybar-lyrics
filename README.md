@@ -6,6 +6,14 @@ Synced Yandex Music lyrics for Waybar.
 
 The module reads Firefox MPRIS metadata/position, fetches LRC lyrics from Yandex Music, caches them on disk, and prints Waybar JSON. It can also seek to the next/previous lyric line with mouse wheel actions.
 
+## Screenshot
+
+![Waybar lyrics module screenshot](assets/screenshot.png)
+
+## Loading Animation
+
+![Animated loading dots demo](assets/demo-loading.gif)
+
 ## Features
 
 - Direct Yandex Music LRC backend.
@@ -80,6 +88,11 @@ Cache files contain track metadata and lyric timestamps/text only. They do not c
 The script reads `YANDEX_TOKEN` from the process environment at runtime. It never prints it and never writes it to disk.
 
 The Yandex request signing value in the source is a public compatibility constant used by existing open Yandex Music clients. It is not an account token or private API key.
+
+## Honorable Mentions
+
+- [MarshalX/yandex-music-api](https://github.com/MarshalX/yandex-music-api) for documenting and implementing the unofficial Yandex Music API behavior this module relies on.
+- [sptlrx](https://github.com/raitonoberu/sptlrx) as the inspiration/fallback path for synced lyrics in terminal/status-bar workflows.
 
 ## License
 
