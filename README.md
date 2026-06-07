@@ -51,6 +51,10 @@ install -Dm755 yamusic-waybar-lyrics ~/.local/bin/yamusic-waybar-lyrics
 
 Set a Yandex Music OAuth token in your shell/session environment:
 
+How to get a token:
+
+- https://ym.marshal.dev/token/
+
 ```sh
 export YANDEX_TOKEN='your-token-here'
 ```

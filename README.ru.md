@@ -51,6 +51,10 @@ install -Dm755 yamusic-waybar-lyrics ~/.local/bin/yamusic-waybar-lyrics
 
 Передайте OAuth token Яндекс Музыки через environment вашей shell/session:
 
+Как получить токен:
+
+- https://ym.marshal.dev/token/
+
 ```sh
 export YANDEX_TOKEN='your-token-here'
 ```
