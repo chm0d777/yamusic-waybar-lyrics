@@ -1,51 +1,51 @@
 # yamusic-waybar-lyrics
 
-[English](README.md) | [Русский](README.ru.md)
+[English](README.en.md) | [Русский](README.md)
 
-Synced Yandex Music lyrics for Waybar.
+Синхронизированные тексты Яндекс Музыки для Waybar.
 
-> Disclosure: this module was coded with an AI coding agent, GPT-5.5, rather than written entirely by hand. Optimization may be imperfect.
+> Предупреждение: этот модуль был написан не человеком, а с помощью кодинг агента GPT-5.5. Оптимизация может быть не идеальная.
 
-The module reads MPRIS metadata/position, fetches LRC lyrics from Yandex Music, caches them on disk, and prints Waybar JSON. It can also seek to the next/previous lyric line with mouse wheel actions.
+Модуль читает metadata/position из MPRIS, получает LRC-тексты из Яндекс Музыки, кеширует их на диске и выводит JSON для Waybar. Также можно перематывать трек к следующей или предыдущей строке текста колёсиком мыши.
 
-## Preview
+## Превью
 
-![Waybar lyrics module screenshot](assets/screenshot.png)
+![Скриншот Waybar lyrics module](assets/screenshot.png)
 
-## Animation Before First Line
+## Анимация Перед Первой Строкой
 
-<img src="assets/demo-loading.gif" width="218" alt="Animated loading dots demo">
+<img src="assets/demo-loading.gif" width="218" alt="Демо анимированных точек загрузки">
 
-## Features
+## Возможности
 
-- Direct Yandex Music LRC backend.
-- MPRIS playback position from any compatible player/browser.
-- In-memory cache while running.
-- Persistent cache in `~/.cache/yamusic-waybar-lyrics/`.
-- Negative cache for missing lyrics for 3 days.
-- Tooltip with current line plus next 5 lines.
-- Mouse wheel seek to next/previous lyric line.
-- Default player target is Firefox, configurable with `MPRIS_PLAYER`.
-- Optional `sptlrx` fallback for no-direct-lyrics cases.
-- No token is stored in files or cache.
+- Прямой backend для Yandex Music LRC.
+- Позиция воспроизведения через любой совместимый MPRIS player/browser.
+- In-memory cache во время работы процесса.
+- Persistent cache в `~/.cache/yamusic-waybar-lyrics/`.
+- Negative cache для треков без текста на 3 дня.
+- Tooltip с текущей строкой и 5 следующими.
+- Перемотка колёсиком мыши к следующей/предыдущей строке текста.
+- По умолчанию используется Firefox, но player target настраивается через `MPRIS_PLAYER`.
+- Опциональный fallback на `sptlrx` для случаев без direct lyrics.
+- Токен не сохраняется в файлы или cache.
 
-## Requirements
+## Требования
 
 - Python 3.10+
 - `dbus-python`
 - Waybar
-- Any player/browser exposing MPRIS metadata and position. Firefox is the default target.
-- Yandex Music OAuth token for direct LRC lookup. The current track does not have to come from the Yandex Music web UI, but it must be matchable in Yandex Music for direct lyrics.
-- `playerctl` for the example click actions
-- Optional: `sptlrx` for fallback
+- Любой player/browser, который отдаёт metadata и position через MPRIS. Firefox используется по умолчанию.
+- OAuth token Яндекс Музыки для direct LRC lookup. Текущий трек не обязательно должен играть именно в веб-интерфейсе Яндекс Музыки, но для direct lyrics он должен находиться через Yandex Music API.
+- `playerctl` для действий по клику из примера
+- Опционально: `sptlrx` для fallback
 
-On Arch/Arch-based systems:
+На Arch/Arch-based системах:
 
 ```sh
 sudo pacman -S python-dbus playerctl waybar
 ```
 
-## Install
+## Установка
 
 ```sh
 mkdir -p ~/.local/bin
@@ -53,17 +53,17 @@ curl -fsSL https://raw.githubusercontent.com/chm0d777/yamusic-waybar-lyrics/main
 chmod +x ~/.local/bin/yamusic-waybar-lyrics
 ```
 
-If you cloned or downloaded this repository, install the local file instead:
+Если вы клонировали или скачали репозиторий, можно установить локальный файл:
 
 ```sh
 install -Dm755 yamusic-waybar-lyrics ~/.local/bin/yamusic-waybar-lyrics
 ```
 
-`install -Dm755` copies the local `yamusic-waybar-lyrics` file, creates parent directories if needed, and marks the destination executable.
+`install -Dm755` копирует локальный файл `yamusic-waybar-lyrics`, создаёт родительские директории при необходимости и делает файл исполняемым.
 
-Set a Yandex Music OAuth token in your shell/session environment:
+Передайте OAuth token Яндекс Музыки через environment вашей shell/session:
 
-How to get a token:
+Как получить токен:
 
 - https://ym.marshal.dev/token/
 
@@ -71,11 +71,11 @@ How to get a token:
 export YANDEX_TOKEN='your-token-here'
 ```
 
-Do not commit tokens. Do not put real tokens into this repository.
+Не коммитьте токены. Не кладите реальные токены в этот репозиторий.
 
 ## Waybar
 
-Add `custom/lyrics` to your Waybar modules and use the snippet from `examples/waybar-config.jsonc`.
+Добавьте `custom/lyrics` в modules Waybar и используйте snippet из `examples/waybar-config.jsonc`.
 
 ```jsonc
 "custom/lyrics": {
@@ -91,46 +91,46 @@ Add `custom/lyrics` to your Waybar modules and use the snippet from `examples/wa
 }
 ```
 
-For a non-Firefox MPRIS player, prefix the command with `MPRIS_PLAYER`. Example:
+Для MPRIS player не из Firefox добавьте `MPRIS_PLAYER` перед командой. Пример:
 
 ```jsonc
 "exec": "MPRIS_PLAYER=chromium ~/.local/bin/yamusic-waybar-lyrics"
 ```
 
-Add the CSS from `examples/waybar-style.css` or adapt it to your theme.
+Добавьте CSS из `examples/waybar-style.css` или адаптируйте его под свою тему.
 
-Restart Waybar after changes.
+После изменений перезапустите Waybar.
 
-## Controls
+## Управление
 
-- Left click: play/pause
-- Right click: next track
-- Middle click: previous track
-- Scroll up: seek to next lyric line
-- Scroll down: seek to previous lyric line
+- ЛКМ: play/pause
+- ПКМ: следующий трек
+- Клик колёсиком: предыдущий трек
+- Scroll up: перейти к следующей строке текста
+- Scroll down: перейти к предыдущей строке текста
 
 ## Cache
 
-Lyrics are cached by Yandex `track_id:album_id` in:
+Тексты кешируются по Yandex `track_id:album_id` в:
 
 ```text
 ~/.cache/yamusic-waybar-lyrics/
 ```
 
-Positive cache entries are kept indefinitely. Missing-lyrics entries expire after 3 days.
+Успешные cache entries хранятся бессрочно. Entries для отсутствующих lyrics истекают через 3 дня.
 
-Cache files contain track metadata and lyric timestamps/text only. They do not contain `YANDEX_TOKEN`.
+Cache-файлы содержат только metadata трека и timestamps/text строк.
 
 ## Privacy
 
-The script reads `YANDEX_TOKEN` from the process environment at runtime. It never prints it and never writes it to disk.
+Скрипт читает `YANDEX_TOKEN` из environment процесса во время runtime. Он не печатает токен и не пишет его на диск.
 
 ## Honorable Mentions
 
-- [MarshalX/yandex-music-api](https://github.com/MarshalX/yandex-music-api) for documenting and implementing the unofficial Yandex Music API behavior this module relies on.
-- [sptlrx](https://github.com/raitonoberu/sptlrx) as the inspiration/fallback path for synced lyrics in terminal/status-bar workflows.
+- [MarshalX/yandex-music-api](https://github.com/MarshalX/yandex-music-api) за документацию и реализацию поведения unofficial Yandex Music API, на которое опирается этот модуль.
+- [sptlrx](https://github.com/raitonoberu/sptlrx) как inspiration/fallback path для synced lyrics в terminal/status-bar workflow.
 
-## License
+## Лицензия
 
 GPL-3.0-or-later.
 
