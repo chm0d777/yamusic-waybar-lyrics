@@ -57,8 +57,15 @@ def metadata_value(value: object) -> str:
 
 def find_mpris_player(bus: dbus.SessionBus) -> str:
     try:
-        return next(
+        name = next(
             (str(name) for name in bus.list_names() if str(name).startswith(MPRIS_PREFIX)),
+            "",
+        )
+        if name:
+            return name
+        # Fallback: любой MPRIS player (для yamusic-tui и др.)
+        return next(
+            (str(name) for name in bus.list_names() if str(name).startswith("org.mpris.MediaPlayer2.")),
             "",
         )
     except dbus.DBusException:

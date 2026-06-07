@@ -59,8 +59,15 @@ def request_json(url: str, data: dict[str, str] | None = None) -> object | None:
 
 def find_mpris_player(bus: dbus.SessionBus) -> str:
     try:
-        return next(
+        name = next(
             (str(name) for name in bus.list_names() if str(name).startswith(MPRIS_PREFIX)),
+            "",
+        )
+        if name:
+            return name
+        # Fallback: любой MPRIS player (для yamusic-tui и др.)
+        return next(
+            (str(name) for name in bus.list_names() if str(name).startswith("org.mpris.MediaPlayer2.")),
             "",
         )
     except dbus.DBusException:
@@ -75,6 +82,9 @@ def current_track() -> tuple[str, str, str]:
             return "", "", ""
         obj = bus.get_object(player_name, "/org/mpris/MediaPlayer2")
         props = dbus.Interface(obj, "org.freedesktop.DBus.Properties")
+        status = str(props.Get("org.mpris.MediaPlayer2.Player", "PlaybackStatus"))
+        if status not in {"Playing", "Paused"}:
+            return "", "", ""
         metadata = props.Get("org.mpris.MediaPlayer2.Player", "Metadata")
         return (
             metadata_value(metadata.get("xesam:title")),
@@ -115,10 +125,12 @@ def library_ids(uid: str, kind: str) -> set[str]:
     tracks = library.get("tracks") or []
     ids = set()
     for track in tracks:
-        track_id = str(track.get("id") or "")
-        album_id = str(track.get("albumId") or track.get("album_id") or "")
-        if track_id:
-            ids.add(f"{track_id}:{album_id}" if album_id else track_id)
+        raw_id = str(track.get("id") or "")
+        if raw_id:
+            ids.add(raw_id)
+            album_id = str(track.get("albumId") or track.get("album_id") or "")
+            if album_id and ":" not in raw_id:
+                ids.add(f"{raw_id}:{album_id}")
     _library_cache[kind] = (ids, now)
     return ids
 
@@ -130,6 +142,7 @@ def invalidate_library_cache(kind: str) -> None:
 _track_search_cache: dict[tuple[str, str, str], tuple[str, float]] = {}
 
 def yandex_track_id(key: tuple[str, str, str]) -> str:
+    """Возвращает только numeric track_id (без album_id), как в MarshalX."""
     title, artist, album = key
     if not title or not artist:
         return ""
@@ -171,13 +184,8 @@ def yandex_track_id(key: tuple[str, str, str]) -> str:
         _track_search_cache[cache_key] = ("", now)
         return ""
     track_id = str(best.get("id") or "")
-    album_id = str((best.get("albums") or [{}])[0].get("id") or "")
-    if not track_id:
-        _track_search_cache[cache_key] = ("", now)
-        return ""
-    full_id = f"{track_id}:{album_id}" if album_id else track_id
-    _track_search_cache[cache_key] = (full_id, now)
-    return full_id
+    _track_search_cache[cache_key] = (track_id, now)
+    return track_id
 
 
 def post_track_action(uid: str, kind: str, action: str, track_id: str) -> bool:
