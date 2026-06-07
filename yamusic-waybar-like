@@ -1,0 +1,211 @@
+#!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-3.0-or-later
+import json
+import os
+import subprocess
+import sys
+import urllib.parse
+import urllib.request
+
+import dbus
+
+
+PLAYER = os.environ.get("MPRIS_PLAYER", "firefox")
+MPRIS_PREFIX = f"org.mpris.MediaPlayer2.{PLAYER}"
+YANDEX_TOKEN = os.environ.get("YANDEX_TOKEN", "")
+YANDEX_TIMEOUT = 3.0
+YANDEX_HEADERS = {
+    "Authorization": f"OAuth {YANDEX_TOKEN}",
+    "User-Agent": "Yandex-Music-API",
+    "X-Yandex-Music-Client": "YandexMusicAndroid/24023621",
+}
+YANDEX_POST_HEADERS = {**YANDEX_HEADERS, "Content-Type": "application/x-www-form-urlencoded"}
+LIKE_EMPTY = "♡"
+LIKE_FULL = "♥"
+
+
+def emit(text: str, css_class: str = "", tooltip: str = "") -> None:
+    payload = {"text": text, "tooltip": tooltip or text}
+    if css_class:
+        payload["class"] = css_class
+    print(json.dumps(payload, ensure_ascii=False), flush=True)
+
+
+def metadata_value(value: object) -> str:
+    if isinstance(value, (list, tuple, dbus.Array)):
+        return ", ".join(str(item) for item in value)
+    return str(value or "")
+
+
+def normalize(text: str) -> str:
+    return " ".join(text.casefold().split())
+
+
+def request_json(url: str, data: dict[str, str] | None = None) -> object | None:
+    if not YANDEX_TOKEN:
+        return None
+    body = None if data is None else urllib.parse.urlencode(data, doseq=True).encode("utf-8")
+    request = urllib.request.Request(url, data=body, headers=YANDEX_POST_HEADERS if data is not None else YANDEX_HEADERS)
+    with urllib.request.urlopen(request, timeout=YANDEX_TIMEOUT) as response:
+        payload = json.loads(response.read().decode("utf-8"))
+    return payload.get("result")
+
+
+def find_mpris_player(bus: dbus.SessionBus) -> str:
+    try:
+        return next(
+            (str(name) for name in bus.list_names() if str(name).startswith(MPRIS_PREFIX)),
+            "",
+        )
+    except dbus.DBusException:
+        return ""
+
+
+def current_track() -> tuple[str, str, str]:
+    try:
+        bus = dbus.SessionBus()
+        player_name = find_mpris_player(bus)
+        if not player_name:
+            return "", "", ""
+        obj = bus.get_object(player_name, "/org/mpris/MediaPlayer2")
+        props = dbus.Interface(obj, "org.freedesktop.DBus.Properties")
+        metadata = props.Get("org.mpris.MediaPlayer2.Player", "Metadata")
+        return (
+            metadata_value(metadata.get("xesam:title")),
+            metadata_value(metadata.get("xesam:artist")),
+            metadata_value(metadata.get("xesam:album")),
+        )
+    except dbus.DBusException:
+        return "", "", ""
+
+
+def account_uid() -> str:
+    result = request_json("https://api.music.yandex.net/account/status")
+    account = (result or {}).get("account", {})
+    return str(account.get("uid") or "")
+
+
+def yandex_track_id(key: tuple[str, str, str]) -> str:
+    title, artist, album = key
+    if not title or not artist:
+        return ""
+
+    params = urllib.parse.urlencode({"text": f"{title} {artist}", "type": "track", "page": "0"})
+    result = request_json(f"https://api.music.yandex.net/search?{params}")
+    tracks = (result or {}).get("tracks", {}).get("results", [])
+    normalized_title = normalize(title)
+    normalized_artist = normalize(artist)
+    normalized_album = normalize(album)
+
+    best = None
+    best_score = -1
+    for track in tracks[:5]:
+        track_title = normalize(str(track.get("title") or ""))
+        artists = ", ".join(str(item.get("name") or "") for item in track.get("artists") or [])
+        track_artists = normalize(artists)
+        albums = track.get("albums") or []
+        track_album = normalize(str((albums or [{}])[0].get("title") or ""))
+
+        score = 0
+        if track_title == normalized_title:
+            score += 4
+        if normalized_artist and normalized_artist in track_artists:
+            score += 3
+        if normalized_album and track_album == normalized_album:
+            score += 2
+        if score > best_score:
+            best = track
+            best_score = score
+
+    if not best or best_score < 4:
+        return ""
+    track_id = str(best.get("id") or "")
+    album_id = str((best.get("albums") or [{}])[0].get("id") or "")
+    if not track_id:
+        return ""
+    return f"{track_id}:{album_id}" if album_id else track_id
+
+
+def library_ids(uid: str, kind: str) -> set[str]:
+    result = request_json(f"https://api.music.yandex.net/users/{uid}/{kind}/tracks")
+    library = (result or {}).get("library", {})
+    tracks = library.get("tracks") or []
+    ids = set()
+    for track in tracks:
+        track_id = str(track.get("id") or "")
+        album_id = str(track.get("albumId") or track.get("album_id") or "")
+        if track_id:
+            ids.add(f"{track_id}:{album_id}" if album_id else track_id)
+    return ids
+
+
+def post_track_action(uid: str, kind: str, action: str, track_id: str) -> bool:
+    url = f"https://api.music.yandex.net/users/{uid}/{kind}/tracks/{action}"
+    result = request_json(url, {"track-ids": track_id})
+    return isinstance(result, dict) and "revision" in result
+
+
+def refresh_waybar() -> None:
+    subprocess.run(["pkill", "-RTMIN+12", "waybar"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+
+def status() -> int:
+    if not YANDEX_TOKEN:
+        emit(LIKE_EMPTY, "unavailable", "YANDEX_TOKEN is not set")
+        return 0
+    key = current_track()
+    track_id = yandex_track_id(key)
+    if not track_id:
+        emit("")
+        return 0
+    uid = account_uid()
+    if not uid:
+        emit(LIKE_EMPTY, "unavailable", "Unable to get account uid")
+        return 0
+
+    liked = track_id in library_ids(uid, "likes")
+    title, artist, _album = key
+    tooltip = f"{title} - {artist}"
+    if liked:
+        emit(LIKE_FULL, "liked", tooltip)
+    else:
+        emit(LIKE_EMPTY, "unliked", tooltip)
+    return 0
+
+
+def action(command: str) -> int:
+    if not YANDEX_TOKEN:
+        return 1
+    key = current_track()
+    track_id = yandex_track_id(key)
+    uid = account_uid()
+    if not track_id or not uid:
+        return 1
+
+    liked = track_id in library_ids(uid, "likes")
+    ok = False
+    if command == "toggle":
+        ok = post_track_action(uid, "likes", "remove", track_id) if liked else post_track_action(uid, "likes", "add-multiple", track_id)
+    elif command == "like":
+        ok = post_track_action(uid, "likes", "add-multiple", track_id)
+    elif command == "unlike":
+        ok = post_track_action(uid, "likes", "remove", track_id)
+    elif command == "dislike":
+        ok = post_track_action(uid, "dislikes", "add-multiple", track_id)
+    elif command == "undislike":
+        ok = post_track_action(uid, "dislikes", "remove", track_id)
+
+    refresh_waybar()
+    return 0 if ok else 1
+
+
+def main() -> int:
+    if len(sys.argv) == 1 or sys.argv[1] == "status":
+        return status()
+    if sys.argv[1] in {"toggle", "like", "unlike", "dislike", "undislike"}:
+        return action(sys.argv[1])
+    return 2
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

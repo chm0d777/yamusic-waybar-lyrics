@@ -27,6 +27,7 @@
 - Перемотка колёсиком мыши к следующей/предыдущей строке текста.
 - По умолчанию используется Firefox, но player target настраивается через `MPRIS_PLAYER`.
 - Опциональный fallback на `sptlrx` для случаев без direct lyrics.
+- Отдельный Waybar-модуль для лайка/дизлайка текущего трека.
 - Токен не сохраняется в файлы или cache.
 
 ## Требования
@@ -50,13 +51,16 @@ sudo pacman -S python-dbus playerctl waybar
 ```sh
 mkdir -p ~/.local/bin
 curl -fsSL https://raw.githubusercontent.com/chm0d777/yamusic-waybar-lyrics/main/yamusic-waybar-lyrics -o ~/.local/bin/yamusic-waybar-lyrics
+curl -fsSL https://raw.githubusercontent.com/chm0d777/yamusic-waybar-lyrics/main/yamusic-waybar-like -o ~/.local/bin/yamusic-waybar-like
 chmod +x ~/.local/bin/yamusic-waybar-lyrics
+chmod +x ~/.local/bin/yamusic-waybar-like
 ```
 
 Если вы клонировали или скачали репозиторий, можно установить локальный файл:
 
 ```sh
 install -Dm755 yamusic-waybar-lyrics ~/.local/bin/yamusic-waybar-lyrics
+install -Dm755 yamusic-waybar-like ~/.local/bin/yamusic-waybar-like
 ```
 
 `install -Dm755` копирует локальный файл `yamusic-waybar-lyrics`, создаёт родительские директории при необходимости и делает файл исполняемым.
@@ -99,6 +103,24 @@ export YANDEX_TOKEN='your-token-here'
 
 Добавьте CSS из `examples/waybar-style.css` или адаптируйте его под свою тему.
 
+Для отдельной кнопки лайка добавьте `custom/like` в modules Waybar и используйте snippet из `examples/waybar-like-config.jsonc`.
+
+```jsonc
+"custom/like": {
+    "return-type": "json",
+    "format": "{}",
+    "hide-empty-text": true,
+    "exec": "~/.local/bin/yamusic-waybar-like status",
+    "interval": 10,
+    "signal": 12,
+    "on-click": "~/.local/bin/yamusic-waybar-like toggle",
+    "on-click-right": "~/.local/bin/yamusic-waybar-like dislike",
+    "on-click-middle": "~/.local/bin/yamusic-waybar-like undislike"
+}
+```
+
+CSS для кнопки лайка лежит в `examples/waybar-like-style.css`.
+
 После изменений перезапустите Waybar.
 
 ## Управление
@@ -108,6 +130,20 @@ export YANDEX_TOKEN='your-token-here'
 - Клик колёсиком: предыдущий трек
 - Scroll up: перейти к следующей строке текста
 - Scroll down: перейти к предыдущей строке текста
+- Like module ЛКМ: поставить/снять лайк
+- Like module ПКМ: поставить “Не рекомендовать”
+- Like module клик колёсиком: снять “Не рекомендовать”
+
+## Like Module
+
+Кнопка лайка использует те же endpoints, что описаны в `MarshalX/yandex-music-api`:
+
+- `users/{uid}/likes/tracks/add-multiple` для лайка
+- `users/{uid}/likes/tracks/remove` для снятия лайка
+- `users/{uid}/dislikes/tracks/add-multiple` для “Не рекомендовать”
+- `users/{uid}/dislikes/tracks/remove` для снятия “Не рекомендовать”
+
+Для треков передаётся `track_id:album_id`, поэтому трек попадает именно в библиотеку “Мне нравится”, а не лайкается как плейлист/альбом/артист.
 
 ## Cache
 

@@ -1,0 +1,11 @@
+"custom/like": {
+    "return-type": "json",
+    "format": "{}",
+    "hide-empty-text": true,
+    "exec": "~/.local/bin/yamusic-waybar-like status",
+    "interval": 10,
+    "signal": 12,
+    "on-click": "~/.local/bin/yamusic-waybar-like toggle",
+    "on-click-right": "~/.local/bin/yamusic-waybar-like dislike",
+    "on-click-middle": "~/.local/bin/yamusic-waybar-like undislike"
+}

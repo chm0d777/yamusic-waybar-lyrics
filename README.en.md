@@ -27,6 +27,7 @@ The module reads MPRIS metadata/position, fetches LRC lyrics from Yandex Music, 
 - Mouse wheel seek to next/previous lyric line.
 - Default player target is Firefox, configurable with `MPRIS_PLAYER`.
 - Optional `sptlrx` fallback for no-direct-lyrics cases.
+- Separate Waybar module for liking/disliking the current track.
 - No token is stored in files or cache.
 
 ## Requirements
@@ -50,13 +51,16 @@ sudo pacman -S python-dbus playerctl waybar
 ```sh
 mkdir -p ~/.local/bin
 curl -fsSL https://raw.githubusercontent.com/chm0d777/yamusic-waybar-lyrics/main/yamusic-waybar-lyrics -o ~/.local/bin/yamusic-waybar-lyrics
+curl -fsSL https://raw.githubusercontent.com/chm0d777/yamusic-waybar-lyrics/main/yamusic-waybar-like -o ~/.local/bin/yamusic-waybar-like
 chmod +x ~/.local/bin/yamusic-waybar-lyrics
+chmod +x ~/.local/bin/yamusic-waybar-like
 ```
 
 If you cloned or downloaded this repository, install the local file instead:
 
 ```sh
 install -Dm755 yamusic-waybar-lyrics ~/.local/bin/yamusic-waybar-lyrics
+install -Dm755 yamusic-waybar-like ~/.local/bin/yamusic-waybar-like
 ```
 
 `install -Dm755` copies the local `yamusic-waybar-lyrics` file, creates parent directories if needed, and marks the destination executable.
@@ -99,6 +103,24 @@ For a non-Firefox MPRIS player, prefix the command with `MPRIS_PLAYER`. Example:
 
 Add the CSS from `examples/waybar-style.css` or adapt it to your theme.
 
+For a separate like button, add `custom/like` to your Waybar modules and use the snippet from `examples/waybar-like-config.jsonc`.
+
+```jsonc
+"custom/like": {
+    "return-type": "json",
+    "format": "{}",
+    "hide-empty-text": true,
+    "exec": "~/.local/bin/yamusic-waybar-like status",
+    "interval": 10,
+    "signal": 12,
+    "on-click": "~/.local/bin/yamusic-waybar-like toggle",
+    "on-click-right": "~/.local/bin/yamusic-waybar-like dislike",
+    "on-click-middle": "~/.local/bin/yamusic-waybar-like undislike"
+}
+```
+
+Like button CSS is in `examples/waybar-like-style.css`.
+
 Restart Waybar after changes.
 
 ## Controls
@@ -108,6 +130,20 @@ Restart Waybar after changes.
 - Middle click: previous track
 - Scroll up: seek to next lyric line
 - Scroll down: seek to previous lyric line
+- Like module left click: toggle like
+- Like module right click: mark as “Do not recommend”
+- Like module middle click: remove “Do not recommend”
+
+## Like Module
+
+The like button uses the same endpoints documented by `MarshalX/yandex-music-api`:
+
+- `users/{uid}/likes/tracks/add-multiple` to like
+- `users/{uid}/likes/tracks/remove` to unlike
+- `users/{uid}/dislikes/tracks/add-multiple` to mark as “Do not recommend”
+- `users/{uid}/dislikes/tracks/remove` to remove “Do not recommend”
+
+Tracks are sent as `track_id:album_id`, so the track is added to the actual “Liked” library, not accidentally liked as a playlist/album/artist.
 
 ## Cache
 

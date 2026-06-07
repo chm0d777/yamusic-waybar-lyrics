@@ -1,0 +1,17 @@
+#custom-like {
+  color: #dcdcdc;
+  padding: 0 8px;
+  font-weight: 900;
+}
+
+#custom-like.liked {
+  color: #e06c75;
+}
+
+#custom-like.disliked {
+  color: #777777;
+}
+
+#custom-like.unavailable {
+  opacity: 0.45;
+}
